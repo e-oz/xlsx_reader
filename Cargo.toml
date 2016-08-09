@@ -1,6 +1,8 @@
 [package]
 name = "xlsx_reader"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["OZ <normandiggs@gmail.com>"]
 
 [dependencies]
+serde_xml = "0.6.3"
+zip = "0.1.17"
