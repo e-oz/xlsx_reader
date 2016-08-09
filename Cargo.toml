@@ -1,0 +1,6 @@
+[package]
+name = "xlsx_reader"
+version = "0.1.0"
+authors = ["OZ <normandiggs@gmail.com>"]
+
+[dependencies]
