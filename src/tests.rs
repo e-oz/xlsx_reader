@@ -17,6 +17,9 @@ fn parse_xlsx() {
           let ref row2 = table[&3];
           assert_eq!(row2[&2], "Emma");
           assert_eq!(row2[&3], "2014-07-04");
+          let ref row3 = table[&4];
+          assert_eq!(row3[&2], "Nikita");
+          assert_eq!(row3[&3], "2002-10-08");
         },
         Err(err) => panic!(err)
       }
