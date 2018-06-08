@@ -115,6 +115,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                       let mut i: usize = 0;
                       let cells_count = cells["c"].len();
                       for cell in &cells["c"] {
+                        let mut found = false;
                         if cell.attributes.contains_key("r") {
                           let pre_i = i;
                           while excel_str_cell(ir + 1, i) != cell.attributes["r"][0] {
@@ -126,7 +127,10 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                           }
                         }
                         match cell.members {
-                          Content::Text(ref t) => { tr.insert(i, t.clone()); },
+                          Content::Text(ref t) => { 
+                            tr.insert(i, t.clone());
+                            found = true;
+                          },
                           _ => {
                             if cell.attributes.contains_key("v") {
                               if cell.attributes.contains_key("t") && cell.attributes["t"][0] == "s" {
@@ -141,21 +145,27 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                                   Err(_) => cell.attributes["v"][0].clone()
                                 };
                                 tr.insert(i, val);
+                                found = true;
                               } else {
                                 if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10" || cell.attributes["s"][0] == "14" || cell.attributes["s"][0] == "15") {
                                   tr.insert(i, excel_date(&cell.attributes["v"][0], Some(1462.0)));
+                                  found = true;
                                 } else {
                                   if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "4" || cell.attributes["s"][0] == "3" || cell.attributes["s"][0] == "5") {
                                     tr.insert(i, excel_date(&cell.attributes["v"][0], None));
+                                    found = true;
                                   } else {
                                     tr.insert(i, cell.attributes["v"][0].clone());
+                                    found = true;
                                   }
                                 }
                               }
                             }
                           }
                         }
-                        i = i + 1;
+                        if found {
+                          i = i + 1;
+                        }
                       }
                       table.insert(ir, tr);
                     }
