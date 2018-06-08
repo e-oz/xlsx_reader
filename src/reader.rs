@@ -58,9 +58,28 @@ pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
     Content::Members(sst) => {
       if sst.contains_key("si") {
         for si in &sst["si"] {
+          let mut found = false;
           if si.attributes.contains_key("t") {
             map.insert(i, si.attributes["t"][0].clone());
+            found = true;
           } else {
+            match &si.members {
+              Content::Members(si_members) => {
+                if si_members.contains_key("t") {
+                  let si_el = &si_members["t"][0];
+                  match si_el.members {
+                    Content::Text(ref t) => {
+                      map.insert(i, t.clone());
+                      found = true;
+                    },
+                    _ => ()
+                  }
+                }
+              },
+              _ => ()
+            }
+          }
+          if !found {
             map.insert(i, "".to_owned());
           }
           i = i + 1;
