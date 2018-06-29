@@ -147,7 +147,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                                 tr.insert(i, val);
                                 found = true;
                               } else {
-                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10" || cell.attributes["s"][0] == "14" || cell.attributes["s"][0] == "15") {
+                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10") {
                                   tr.insert(i, excel_date(&cell.attributes["v"][0], Some(1462.0)));
                                   found = true;
                                 } else {
