@@ -127,7 +127,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                           }
                         }
                         match cell.members {
-                          Content::Text(ref t) => { 
+                          Content::Text(ref t) => {
                             tr.insert(i, t.clone());
                             found = true;
                           },
@@ -147,7 +147,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                                 tr.insert(i, val);
                                 found = true;
                               } else {
-                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10") {
+                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10" || cell.attributes["s"][0] == "14" || cell.attributes["s"][0] == "15") {
                                   tr.insert(i, excel_date(&cell.attributes["v"][0], Some(1462.0)));
                                   found = true;
                                 } else {
@@ -189,8 +189,12 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
 pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
   let mut days: f64 = match src.parse::<f64>() {
     Ok(i) => i + days_offset.unwrap_or(0.0),
-    Err(_) => return "".to_owned()
+    Err(_) => return src.to_owned()
   };
+  // this parses currently doesn't know how to detect dates correctly in Excel format, so all dates < year 1900 will be ignored 
+  if days < 693500.0 {
+    return src.to_owned();
+  }
   let d: isize;
   let m: isize;
   let y: isize;
