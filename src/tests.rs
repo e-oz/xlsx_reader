@@ -8,7 +8,7 @@ fn parse_xlsx() {
     f.read_to_end(&mut content)
   }) {
     Ok(_) => {
-      match super::parse_xlsx(&content) {
+      match super::parse_xlsx(&content, Some([3].to_vec())) {
         Ok(table) => {
           let ref row1 = table[&2];
           assert_eq!(row1[&2], "Rust");

@@ -135,7 +135,12 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                           _ => {
                             if cell.attributes.contains_key("v") {
                               if known_date_columns.contains(&i) {
-                                tr.insert(i, excel_date(&cell.attributes["v"][0], None));
+                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10" || cell.attributes["s"][0] == "14" || cell.attributes["s"][0] == "15") {
+                                  // when parsing dates in format "05/15/2015 7 PM" we need to add this offset
+                                  tr.insert(i, excel_date(&cell.attributes["v"][0], Some(1462.0)));
+                                } else {
+                                  tr.insert(i, excel_date(&cell.attributes["v"][0], None));
+                                }
                                 found = true;
                               } else {
                                 if cell.attributes.contains_key("t") && cell.attributes["t"][0] == "s" {
@@ -144,7 +149,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                                       if strings_map.contains_key(&map_index) {
                                         strings_map[&map_index].clone()
                                       } else {
-                                        "".to_owned()
+                                        cell.attributes["v"][0].clone()
                                       }
                                     },
                                     Err(_) => cell.attributes["v"][0].clone()
@@ -182,26 +187,26 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
   Err("not impl".to_owned())
 }
 
-pub fn excel_date(src: &str, days_offset: Option<isize>) -> String {
-  let mut days: isize = match src.parse::<isize>() {
-    Ok(i) => i + days_offset.unwrap_or(0),
+pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
+  let mut days: f64 = match src.parse::<f64>() {
+    Ok(i) => i + days_offset.unwrap_or(0.0),
     Err(_) => return src.to_owned()
   };
   let d: isize;
   let m: isize;
   let y: isize;
-  if days == 60 {
+  if days == 60.0 {
     d = 29;
     m = 2;
     y = 1900;
   } else {
-    if days < 60 {
+    if days < 60.0 {
       // Because of the 29-02-1900 bug, any serial date 
       // under 60 is one off... Compensate.
-      days += 1;
+      days += 1.0;
     }
     // Modified Julian to DMY calculation with an addition of 2415019
-    let mut l = days + 68569 + 2415019;
+    let mut l = (days as isize) + 68569 + 2415019;
     let n = (4 * l) / 146097;
     l = l - ((146097 * n + 3) / 4);
     let i = (4000 * (l + 1)) / 1461001;
