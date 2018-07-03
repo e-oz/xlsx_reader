@@ -152,13 +152,8 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                                   tr.insert(i, val);
                                   found = true;
                                 } else {
-                                  if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "3") {
-                                    tr.insert(i, excel_date(&cell.attributes["v"][0], None));
-                                    found = true;
-                                  } else {
-                                    tr.insert(i, cell.attributes["v"][0].clone());
-                                    found = true;
-                                  }
+                                  tr.insert(i, cell.attributes["v"][0].clone());
+                                  found = true;
                                 }
                               }
                             }
