@@ -6,7 +6,7 @@ use serde_xml::from_str;
 use serde_xml::value::{Element, Content};
 use std::char;
 
-pub fn parse_xlsx(data: &Vec<u8>) -> Result<HashMap<usize, HashMap<usize, String>>, String> {
+pub fn parse_xlsx(data: &Vec<u8>, date_columns: Option<Vec<usize>>) -> Result<HashMap<usize, HashMap<usize, String>>, String> {
   let (strings, sheet) = match parse_xlsx_file_to_parts(data) {
     Ok(r) => r,
     Err(err) => return Err(err)
@@ -15,7 +15,7 @@ pub fn parse_xlsx(data: &Vec<u8>) -> Result<HashMap<usize, HashMap<usize, String
     Some(m) => m,
     None => return Err("Data extracting error".to_owned())
   };
-  get_parsed_xlsx(map, sheet)
+  get_parsed_xlsx(map, sheet, date_columns)
 }
 
 pub fn parse_xlsx_file_to_parts(data: &Vec<u8>) -> Result<(String, String), String>
@@ -91,12 +91,13 @@ pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
   Some(map)
 }
 
-pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: String) -> Result<HashMap<usize, HashMap<usize, String>>, String>
+pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: String, date_columns: Option<Vec<usize>>) -> Result<HashMap<usize, HashMap<usize, String>>, String>
 {
   let xml_value: Element = match from_str(&sheet_content) {
     Ok(c) => c,
     Err(err) => return Err(format!("XML parsing error: {:?}", err))
   };
+  let known_date_columns: Vec<usize> = date_columns.unwrap_or(Vec::new());
 
   match xml_value.members {
     Content::Members(worksheet) => {
@@ -133,22 +134,22 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                           },
                           _ => {
                             if cell.attributes.contains_key("v") {
-                              if cell.attributes.contains_key("t") && cell.attributes["t"][0] == "s" {
-                                let val = match cell.attributes["v"][0].parse::<usize>() {
-                                  Ok(map_index) => {
-                                    if strings_map.contains_key(&map_index) {
-                                      strings_map[&map_index].clone()
-                                    } else {
-                                      "".to_owned()
-                                    }
-                                  },
-                                  Err(_) => cell.attributes["v"][0].clone()
-                                };
-                                tr.insert(i, val);
+                              if known_date_columns.contains(&i) {
+                                tr.insert(i, excel_date(&cell.attributes["v"][0], None));
                                 found = true;
                               } else {
-                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10" || cell.attributes["s"][0] == "14" || cell.attributes["s"][0] == "15") {
-                                  tr.insert(i, excel_date(&cell.attributes["v"][0], Some(1462)));
+                                if cell.attributes.contains_key("t") && cell.attributes["t"][0] == "s" {
+                                  let val = match cell.attributes["v"][0].parse::<usize>() {
+                                    Ok(map_index) => {
+                                      if strings_map.contains_key(&map_index) {
+                                        strings_map[&map_index].clone()
+                                      } else {
+                                        "".to_owned()
+                                      }
+                                    },
+                                    Err(_) => cell.attributes["v"][0].clone()
+                                  };
+                                  tr.insert(i, val);
                                   found = true;
                                 } else {
                                   if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "4" || cell.attributes["s"][0] == "3" || cell.attributes["s"][0] == "5") {
