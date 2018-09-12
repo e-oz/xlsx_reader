@@ -2,9 +2,8 @@ use zip;
 use std::io::Cursor;
 use std::io::Read;
 use std::collections::HashMap;
-use serde_xml::from_str;
-use serde_xml::value::{Element, Content};
 use std::char;
+use serde_xml_rs::deserialize;
 
 pub fn parse_xlsx(data: &Vec<u8>, date_columns: Option<Vec<usize>>) -> Result<HashMap<usize, HashMap<usize, String>>, String> {
   let (strings, sheet) = match parse_xlsx_file_to_parts(data) {
@@ -48,143 +47,139 @@ pub fn parse_xlsx_file_to_parts(data: &Vec<u8>) -> Result<(String, String), Stri
 
 pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
 {
-  let xml_value: Element = match from_str(&strings) {
+  #[derive(Deserialize)]
+  struct T {
+    #[serde(rename = "$value")]
+    val: String,
+  }
+
+  #[derive(Deserialize)]
+  struct Si {
+    t: T,
+  }
+
+  #[derive(Deserialize)]
+  struct Sst {
+    si: Vec<Si>
+  }
+  
+  let sst: Sst = match deserialize(strings.as_bytes()) {
     Ok(c) => c,
     Err(_) => return None
   };
   let mut map: HashMap<usize, String> = HashMap::new();
   let mut i = 0;
-  match xml_value.members {
-    Content::Members(sst) => {
-      if sst.contains_key("si") {
-        for si in &sst["si"] {
-          let mut found = false;
-          if si.attributes.contains_key("t") {
-            map.insert(i, si.attributes["t"][0].clone());
-            found = true;
-          } else {
-            match &si.members {
-              Content::Members(si_members) => {
-                if si_members.contains_key("t") {
-                  let si_el = &si_members["t"][0];
-                  match si_el.members {
-                    Content::Text(ref t) => {
-                      map.insert(i, t.clone());
-                      found = true;
-                    },
-                    _ => ()
-                  }
-                }
-              },
-              _ => ()
-            }
-          }
-          if !found {
-            map.insert(i, "".to_owned());
-          }
-          i = i + 1;
-        }
-      }
-    },
-    _ => ()
+  for si in sst.si.iter() {
+    map.insert(i, si.t.val.clone());
+    i = i + 1;
   }
   Some(map)
 }
 
+#[derive(Deserialize)]
+struct CellValue {
+  #[serde(rename = "$value")]
+  v: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct Cell {
+  r: Option<String>,
+  s: Option<String>,
+  t: Option<String>,
+  v: Option<CellValue>,
+}
+
+#[derive(Deserialize)]
+struct Row {
+  #[serde(rename = "c", default)]
+  pub cells: Option<Vec<Cell>>,
+}
+
+#[derive(Deserialize)]
+struct SheetData {
+  #[serde(rename = "row", default)]
+  pub rows: Vec<Row>,
+}
+
+#[derive(Deserialize)]
+struct Worksheet {
+  #[serde(rename = "sheetData", default)]
+  pub sheet: Vec<SheetData>
+}
+
 pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: String, date_columns: Option<Vec<usize>>) -> Result<HashMap<usize, HashMap<usize, String>>, String>
 {
-  let xml_value: Element = match from_str(&sheet_content) {
-    Ok(c) => c,
+  let worksheet: Worksheet = match deserialize(sheet_content.as_bytes()) {
+    Ok(ws) => ws,
     Err(err) => return Err(format!("XML parsing error: {:?}", err))
   };
   let known_date_columns: Vec<usize> = date_columns.unwrap_or(Vec::new());
-
-  match xml_value.members {
-    Content::Members(worksheet) => {
-      if worksheet.contains_key("sheetData") {
-        let sheet_data = &worksheet["sheetData"][0];
-        match sheet_data.members {
-          Content::Members(ref rows_el) => {
-            if rows_el.contains_key("row") {
-              let mut table: HashMap<usize, HashMap<usize, String>> = HashMap::with_capacity(rows_el["row"].len());
-              let mut ir: usize = 0;
-              for row in &rows_el["row"] {
-                match row.members {
-                  Content::Members(ref cells) => {
-                    if cells.contains_key("c") {
-                      let mut tr: HashMap<usize, String> = HashMap::with_capacity(cells.len());
-                      let mut i: usize = 0;
-                      let cells_count = cells["c"].len();
-                      for cell in &cells["c"] {
-                        let mut found = false;
-                        if cell.attributes.contains_key("r") {
-                          let pre_i = i;
-                          while excel_str_cell(ir + 1, i) != cell.attributes["r"][0] {
-                            i += 1;
-                            if i > cells_count {
-                              i = pre_i;
-                              break;
-                            }
-                          }
-                        }
-                        match cell.members {
-                          Content::Text(ref t) => {
-                            tr.insert(i, t.clone());
-                            found = true;
-                          },
-                          _ => {
-                            if cell.attributes.contains_key("v") {
-                              if known_date_columns.contains(&i) {
-                                if cell.attributes.contains_key("s") && (cell.attributes["s"][0] == "10" || cell.attributes["s"][0] == "14" || cell.attributes["s"][0] == "15") {
-                                  // when parsing dates in format "05/15/2015 7 PM" we need to add this offset
-                                  tr.insert(i, excel_date(&cell.attributes["v"][0], Some(1462.0)));
-                                } else {
-                                  tr.insert(i, excel_date(&cell.attributes["v"][0], None));
-                                }
-                                found = true;
-                              } else {
-                                if cell.attributes.contains_key("t") && cell.attributes["t"][0] == "s" {
-                                  let val = match cell.attributes["v"][0].parse::<usize>() {
-                                    Ok(map_index) => {
-                                      if strings_map.contains_key(&map_index) {
-                                        strings_map[&map_index].clone()
-                                      } else {
-                                        cell.attributes["v"][0].clone()
-                                      }
-                                    },
-                                    Err(_) => cell.attributes["v"][0].clone()
-                                  };
-                                  tr.insert(i, val);
-                                  found = true;
-                                } else {
-                                  tr.insert(i, cell.attributes["v"][0].clone());
-                                  found = true;
-                                }
-                              }
-                            }
-                          }
-                        }
-                        if found {
-                          i = i + 1;
-                        }
-                      }
-                      table.insert(ir, tr);
+  let sd = &worksheet.sheet[0];
+  let mut table: HashMap<usize, HashMap<usize, String>> = HashMap::with_capacity(sd.rows.len());
+  let mut ir: usize = 0;
+  for row in sd.rows.iter() {
+    if let Some(ref cells) = row.cells {
+      let mut tr: HashMap<usize, String> = HashMap::with_capacity(cells.len());
+      let mut i: usize = 0;
+      let cells_count = cells.len();
+      for cell in cells.iter() {
+        let mut found = false;
+        if let Some(ref cell_r) = cell.r {
+          let pre_i = i;
+          while excel_str_cell(ir + 1, i) != cell_r.as_str() {
+            i += 1;
+            if i > cells_count {
+              i = pre_i;
+              break;
+            }
+          }
+        }
+        if let Some(ref cv) = cell.v {
+          if let Some(ref value) = cv.v {
+            if known_date_columns.contains(&i) {
+              if let Some(ref s) = cell.s {
+                if s == "10" || s == "14" || s == "15" {
+                  // when parsing dates in format "05/15/2015 7 PM" we need to add this offset
+                  tr.insert(i, excel_date(value, Some(1462.0)));
+                } else {
+                  tr.insert(i, excel_date(value, None));
+                }
+              } else {
+                tr.insert(i, excel_date(value, None));
+              }
+              found = true;
+            } else {
+              let t = cell.t.clone().unwrap_or("".to_owned());
+              if t == "s" {
+                let val = match value.parse::<usize>() {
+                  Ok(map_index) => {
+                    if strings_map.contains_key(&map_index) {
+                      strings_map[&map_index].clone()
+                    } else {
+                      value.to_owned()
                     }
                   },
-                  _ => ()
-                }
-                ir = ir + 1;
+                  Err(_) => value.to_owned()
+                };
+                tr.insert(i, val);
+                found = true;
+              } else {
+                tr.insert(i, value.to_owned());
+                found = true;
               }
-              return Ok(table);
             }
-          },
-          _ => ()
+          }
+        }
+        if found {
+          i = i + 1;
         }
       }
-    },
-    _ => ()
+      table.insert(ir, tr);
+      ir = ir + 1;
+    }
   }
-  Err("not impl".to_owned())
+  Ok(table)
 }
 
 pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
