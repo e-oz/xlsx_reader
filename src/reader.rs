@@ -50,7 +50,7 @@ pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
   #[derive(Deserialize)]
   struct T {
     #[serde(rename = "$value")]
-    val: String,
+    val: Option<String>,
   }
 
   #[derive(Deserialize)]
@@ -70,7 +70,7 @@ pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
   let mut map: HashMap<usize, String> = HashMap::new();
   let mut i = 0;
   for si in sst.si.iter() {
-    map.insert(i, si.t.val.clone());
+    map.insert(i, si.t.val.clone().unwrap_or("".to_owned()));
     i = i + 1;
   }
   Some(map)

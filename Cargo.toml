@@ -1,6 +1,6 @@
 [package]
 name = "xlsx_reader"
-version = "2.4.0"
+version = "2.4.1"
 authors = ["OZ <normandiggs@gmail.com>"]
 description = "Reader of XLSX files (only data)"
 license = "MIT"
