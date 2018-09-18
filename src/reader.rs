@@ -47,31 +47,22 @@ pub fn parse_xlsx_file_to_parts(data: &Vec<u8>) -> Result<(String, String), Stri
 
 pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
 {
-  #[derive(Deserialize)]
-  struct T {
-    #[serde(rename = "$value")]
-    val: Option<String>,
-  }
-
-  #[derive(Deserialize)]
-  struct Si {
-    t: T,
-  }
-
-  #[derive(Deserialize)]
-  struct Sst {
-    si: Vec<Si>
-  }
-  
-  let sst: Sst = match deserialize(strings.as_bytes()) {
-    Ok(c) => c,
-    Err(_) => return None
-  };
   let mut map: HashMap<usize, String> = HashMap::new();
   let mut i = 0;
-  for si in sst.si.iter() {
-    map.insert(i, si.t.val.clone().unwrap_or("".to_owned()));
-    i = i + 1;
+  let sis = strings.split("<si>");
+  for si in sis {
+    if let Some(ts) = si.find("<t>") {
+      if let Some(te) = si.find("</t>") {
+        let s = ts + 3;
+        let e = te - ts - 3;
+        let l = si.len();
+        if s < l && e > 0 {
+          let v = si.chars().skip(s).take(e).collect();
+          map.insert(i, v);
+          i = i + 1;
+        }
+      }
+    }
   }
   Some(map)
 }

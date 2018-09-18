@@ -27,3 +27,19 @@ fn parse_xlsx() {
     Err(_) => panic!("Test file not found")
   }
 }
+
+//#[test]
+//fn debug() {
+//  let mut content: Vec<u8> = Vec::new();
+//  match File::open("./src/debug.xlsx").and_then(|mut f| {
+//    f.read_to_end(&mut content)
+//  }) {
+//    Ok(_) => {
+//      match super::parse_xlsx(&content, None) {
+//        Ok(table) => panic!(format!("{:?}", table)),
+//        Err(err) => panic!(err)
+//      }
+//    }
+//    Err(_) => panic!("Test file not found")
+//  }
+//}
