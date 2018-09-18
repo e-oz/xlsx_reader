@@ -59,10 +59,10 @@ pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
         if s < l && e > 0 {
           let v = si.chars().skip(s).take(e).collect();
           map.insert(i, v);
-          i = i + 1;
         }
       }
     }
+    i = i + 1;
   }
   Some(map)
 }
