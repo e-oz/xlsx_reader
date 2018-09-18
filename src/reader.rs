@@ -47,18 +47,45 @@ pub fn parse_xlsx_file_to_parts(data: &Vec<u8>) -> Result<(String, String), Stri
 
 pub fn get_strings_map(strings: String) -> Option<HashMap<usize, String>>
 {
+  #[derive(Debug, Deserialize)]
+  struct T {
+    #[serde(rename = "$value")]
+    val: Option<String>,
+  }
+
+  #[derive(Debug, Deserialize)]
+  struct R {
+    t: Option<T>,
+  }
+
+  #[derive(Debug, Deserialize)]
+  struct Si {
+    t: Option<Vec<T>>,
+    r: Option<Vec<R>>,
+  }
+
+  #[derive(Debug, Deserialize)]
+  struct Sst {
+    si: Vec<Si>
+  }
+
+  let sst: Sst = match deserialize(strings.as_bytes()) {
+    Ok(c) => c,
+    Err(_) => return None
+  };
   let mut map: HashMap<usize, String> = HashMap::new();
   let mut i = 0;
-  let sis = strings.split("<si>");
-  for si in sis {
-    if let Some(ts) = si.find("<t>") {
-      if let Some(te) = si.find("</t>") {
-        let s = ts + 3;
-        let e = te - ts - 3;
-        let l = si.len();
-        if s < l && e > 0 {
-          let v = si.chars().skip(s).take(e).collect();
-          map.insert(i, v);
+  for si in sst.si.iter() {
+    if let Some(ref sits) = si.t {
+      if let Some(ref sit) = sits.get(0) {
+        map.insert(i, sit.val.clone().unwrap_or("".to_owned()));
+      }
+    } else {
+      if let Some(ref sirs) = si.r {
+        if let Some(ref sir) = sirs.get(0) {
+          if let Some(ref sirt) = sir.t {
+            map.insert(i, sirt.val.clone().unwrap_or("".to_owned()));
+          }
         }
       }
     }
