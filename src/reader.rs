@@ -142,6 +142,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
       let mut i: usize = 0;
       let cells_count = cells.len();
       for cell in cells.iter() {
+        let mut found = false;
         if let Some(ref cell_r) = cell.r {
           let pre_i = i;
           i = 0;
@@ -166,6 +167,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
               } else {
                 tr.insert(i, excel_date(value, None));
               }
+              found = true;
             } else {
               let t = cell.t.clone().unwrap_or("".to_owned());
               if t == "s" {
@@ -180,11 +182,16 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
                   Err(_) => value.to_owned()
                 };
                 tr.insert(i, val);
+                found = true;
               } else {
                 tr.insert(i, value.to_owned());
+                found = true;
               }
             }
           }
+        }
+        if !found {
+          tr.insert(i, "".to_owned());
         }
         i = i + 1;
       }
