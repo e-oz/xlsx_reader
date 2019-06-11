@@ -145,6 +145,7 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
         let mut found = false;
         if let Some(ref cell_r) = cell.r {
           let pre_i = i;
+          i = 0;
           while excel_str_cell(ir + 1, i) != cell_r.as_str() {
             i += 1;
             if i > cells_count {
