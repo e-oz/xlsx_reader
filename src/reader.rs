@@ -228,7 +228,12 @@ pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
     m = j + 2 - (12 * l);
     y = 100 * (n - 49) + i + l;
   }
-  return format!("{}-{:02}-{:02}", y, m, d)
+  let date = format!("{}-{:02}-{:02}", y, m, d);
+  if date == "1900-01-01" {
+    src.to_owned()
+  } else {
+    date
+  }
 }
 
 pub fn excel_str_cell(row: usize, cell: usize) -> String {
