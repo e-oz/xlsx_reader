@@ -196,7 +196,11 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
 
 pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
   let mut days: f64 = match src.parse::<f64>() {
-    Ok(i) => i + days_offset.unwrap_or(0.0),
+    Ok(i) => {
+      if i != 0.0 { i + days_offset.unwrap_or(0.0) } else {
+        return src.to_owned()
+      }
+    },
     Err(_) => return src.to_owned()
   };
   let d: isize;
