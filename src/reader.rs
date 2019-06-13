@@ -154,18 +154,29 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
         }
         if let Some(ref cv) = cell.v {
           if let Some(ref value) = cv.v {
+            let mut value_found = false;
             if known_date_columns.contains(&i) {
               if let Some(ref s) = cell.s {
                 if s == "10" || s == "14" || s == "15" {
                   // when parsing dates in format "05/15/2015 7 PM" we need to add this offset
-                  tr.insert(i, excel_date(value, Some(1462.0)));
+                  if let Some(dt) = excel_date(value, Some(1462.0)) {
+                    tr.insert(i, dt);
+                    value_found = true;
+                  }
                 } else {
-                  tr.insert(i, excel_date(value, None));
+                  if let Some(dt) = excel_date(value, None) {
+                    tr.insert(i, dt);
+                    value_found = true;
+                  }
                 }
               } else {
-                tr.insert(i, excel_date(value, None));
+                if let Some(dt) = excel_date(value, None) {
+                  tr.insert(i, dt);
+                  value_found = true;
+                }
               }
-            } else {
+            }
+            if !value_found {
               let t = cell.t.clone().unwrap_or("".to_owned());
               if t == "s" {
                 let val = match value.parse::<usize>() {
@@ -194,14 +205,14 @@ pub fn get_parsed_xlsx(strings_map: HashMap<usize, String>, sheet_content: Strin
   Ok(table)
 }
 
-pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
+pub fn excel_date(src: &str, days_offset: Option<f64>) -> Option<String> {
   let mut days: f64 = match src.parse::<f64>() {
     Ok(i) => {
       if i != 0.0 { i + days_offset.unwrap_or(0.0) } else {
-        return src.to_owned()
+        return None;
       }
     },
-    Err(_) => return src.to_owned()
+    Err(_) => return None
   };
   let d: isize;
   let m: isize;
@@ -230,9 +241,9 @@ pub fn excel_date(src: &str, days_offset: Option<f64>) -> String {
   }
   let date = format!("{}-{:02}-{:02}", y, m, d);
   if date == "1900-01-01" {
-    src.to_owned()
+    None
   } else {
-    date
+    Some(date)
   }
 }
 
