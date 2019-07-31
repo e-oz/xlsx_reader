@@ -240,7 +240,7 @@ pub fn excel_date(src: &str, days_offset: Option<f64>) -> Option<String> {
     y = 100 * (n - 49) + i + l;
   }
   let date = format!("{}-{:02}-{:02}", y, m, d);
-  if date == "1900-01-01" {
+  if date == "1900-01-01" || date == "1900-01-02" {
     None
   } else {
     Some(date)
