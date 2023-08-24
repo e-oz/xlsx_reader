@@ -4,6 +4,7 @@ use std::io::Read;
 use std::collections::HashMap;
 use std::char;
 use serde_xml_rs::deserialize;
+use serde_derive::Deserialize;
 
 pub fn parse_xlsx(data: &Vec<u8>, date_columns: Option<Vec<usize>>) -> Result<HashMap<usize, HashMap<usize, String>>, String> {
   let (strings, sheet) = match parse_xlsx_file_to_parts(data) {
