@@ -1,5 +1,3 @@
-extern crate zip;
-extern crate serde_xml_rs;
 #[macro_use] extern crate serde_derive;
 
 pub mod reader;
