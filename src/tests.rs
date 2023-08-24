@@ -21,7 +21,7 @@ fn parse_xlsx() {
           assert_eq!(row3[&2], "Nikita");
           assert_eq!(row3[&3], "2002-10-08");
         },
-        Err(err) => panic!(err)
+        Err(err) => panic!("{}", err)
       }
     }
     Err(_) => panic!("Test file not found")
