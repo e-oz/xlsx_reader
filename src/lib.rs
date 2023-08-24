@@ -4,7 +4,7 @@ extern crate serde_xml_rs;
 
 pub mod reader;
 
-pub use reader::parse_xlsx;
+pub use crate::reader::parse_xlsx;
 
 #[cfg(test)]
 mod tests;
